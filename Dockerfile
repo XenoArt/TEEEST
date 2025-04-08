@@ -1,26 +1,20 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+# Use the official .NET image as a build stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 80
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY ["TEEEST/TEEEST.csproj", "TEEEST/"]
+RUN dotnet restore "TEEEST/TEEEST.csproj"
+COPY . .
+WORKDIR "/src/TEEEST"
+RUN dotnet build "TEEEST.csproj" -c Release -o /app/build
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.3" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.3" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.3">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.3" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-    <!-- Added the direct reference -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.3" />
-  </ItemGroup>
+FROM build AS publish
+RUN dotnet publish "TEEEST.csproj" -c Release -o /app/publish
 
-</Project>
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "TEEEST.dll"]
